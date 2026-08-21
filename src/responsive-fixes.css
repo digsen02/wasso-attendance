@@ -1,0 +1,46 @@
+.admin-grid > *,
+.dashboard-grid > *,
+.submission-grid > *,
+.profile-grid > * {
+  min-width: 0;
+}
+
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (max-width: 700px) {
+  .admin-grid,
+  .dashboard-grid,
+  .submission-grid,
+  .profile-grid {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .admin-grid > .panel {
+    overflow: hidden;
+  }
+
+  .admin-grid table,
+  .student-list table {
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .admin-grid th:nth-child(4),
+  .admin-grid td:nth-child(4),
+  .admin-grid th:nth-child(5),
+  .admin-grid td:nth-child(5),
+  .admin-grid th:nth-child(7),
+  .admin-grid td:nth-child(7),
+  .student-list th:nth-child(4),
+  .student-list td:nth-child(4),
+  .student-list th:nth-child(5),
+  .student-list td:nth-child(5),
+  .student-list th:nth-child(7),
+  .student-list td:nth-child(7) {
+    display: none;
+  }
+}
