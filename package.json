@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "smoke": "node scripts/smoke.mjs",
+    "smoke": "node scripts/check-supabase.mjs",
+    "backend:check": "node scripts/check-supabase.mjs",
     "backend:create-admin": "node scripts/create-admin.mjs",
     "backend:start": "npx supabase start",
     "backend:reset": "npx supabase db reset",
@@ -23,8 +24,5 @@
     "react-router-dom": "^6.30.6",
     "tailwindcss": "^4.3.3",
     "vite": "latest"
-  },
-  "devDependencies": {
-    "playwright-core": "^1.62.1"
   }
 }

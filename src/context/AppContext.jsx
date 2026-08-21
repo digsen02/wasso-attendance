@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
 import { attendanceService, authService, notificationService, reportService, submissionPeriodService, userService } from '../services';
-import { ReportStatus } from '../data/seed';
+import { ReportStatus } from '../domain/enums';
 
 const AppContext=createContext(null);
 const initial={ready:false,loading:false,error:null,currentUser:null,users:[],logs:[],reports:[],periods:[],notifications:[],toast:null};

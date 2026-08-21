@@ -11,7 +11,6 @@ npm run backend:test
 ```
 
 명령 출력의 API URL과 anon key를 루트 `.env`의 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`에 입력합니다.
-백엔드 없이 UI 흐름만 확인할 때는 `VITE_USE_MOCK=true`를 설정할 수 있습니다. 기본값은 Supabase 우선입니다.
 
 ## 원격 배포
 

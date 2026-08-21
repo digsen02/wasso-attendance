@@ -1,5 +1,5 @@
 import { repository } from '../repositories';
-import { ReportStatus } from '../data/seed';
+import { ReportStatus } from '../domain/enums';
 
 export const authService = { login:(u,p)=>repository.login(u,p), logout:()=>repository.logout(), restore:()=>repository.restoreSession(), signup:input=>repository.signup(input) };
 export const userService = { list:()=>repository.getUsers() };
