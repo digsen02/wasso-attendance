@@ -7,13 +7,21 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "backend:create-admin": "node scripts/create-admin.mjs",
+    "backend:start": "npx supabase start",
+    "backend:reset": "npx supabase db reset",
+    "backend:test": "npx supabase test db"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
+    "@supabase/supabase-js": "^2.112.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react-swc": "^4.3.3",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "react-router-dom": "^6.30.6",
+    "tailwindcss": "^4.3.3",
     "vite": "latest"
   },
   "devDependencies": {
