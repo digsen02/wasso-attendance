@@ -1,8 +1,9 @@
 import { readEnvFile } from './env-file.mjs';
-const localEnv=readEnvFile();
+import { publicSupabaseConfig } from '../src/config/supabase.public.js';
+const localEnv=process.env.SKIP_ENV_FILE==='true'?{}:readEnvFile();
 
-const rawUrl=process.env.VITE_SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL||localEnv.VITE_SUPABASE_URL||localEnv.NEXT_PUBLIC_SUPABASE_URL;
-const key=process.env.VITE_SUPABASE_ANON_KEY||process.env.VITE_SUPABASE_PUBLISHABLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||localEnv.VITE_SUPABASE_ANON_KEY||localEnv.VITE_SUPABASE_PUBLISHABLE_KEY||localEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const rawUrl=process.env.VITE_SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL||localEnv.VITE_SUPABASE_URL||localEnv.NEXT_PUBLIC_SUPABASE_URL||publicSupabaseConfig.url;
+const key=process.env.VITE_SUPABASE_ANON_KEY||process.env.VITE_SUPABASE_PUBLISHABLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||localEnv.VITE_SUPABASE_ANON_KEY||localEnv.VITE_SUPABASE_PUBLISHABLE_KEY||localEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||publicSupabaseConfig.publishableKey;
 if(!rawUrl||!key)throw new Error('VITE_SUPABASE_URL과 Supabase public key가 필요합니다.');
 
 const baseUrl=rawUrl.replace(/\/rest\/v1\/?$/,'').replace(/\/$/,'');

@@ -4,7 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { readEnvFile } from './scripts/env-file.mjs';
 
 export default defineConfig(()=>{
-  const env=readEnvFile();
+  let env={};
+  if(process.env.VITE_IGNORE_LOCAL_ENV!=='true')try{env=readEnvFile()}catch{}
   const projectUrl=process.env.VITE_SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL||env.VITE_SUPABASE_URL||env.NEXT_PUBLIC_SUPABASE_URL||'';
   const publicKey=process.env.VITE_SUPABASE_ANON_KEY||process.env.VITE_SUPABASE_PUBLISHABLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||env.VITE_SUPABASE_ANON_KEY||env.VITE_SUPABASE_PUBLISHABLE_KEY||env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||'';
   return {
