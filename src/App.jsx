@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Navigate,
   NavLink,
@@ -38,7 +38,21 @@ import { useApp } from "./context/AppContext";
 import { AttendanceStatus, ReportStatus, Role } from "./domain/enums";
 import { formatDateTime, getDday, statusMeta } from "./utils/format";
 
-const currentMonth = "2026-08";
+const today = new Date();
+const systemMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+const shiftMonth = (yearMonth, amount) => {
+  const [year, month] = yearMonth.split("-").map(Number);
+  const value = new Date(year, month - 1 + amount, 1);
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
+};
+const monthLabel = (yearMonth) => yearMonth.replace("-", ". ");
+const monthEndLabel = (yearMonth) => {
+  const [year, month] = yearMonth.split("-").map(Number);
+  return `${year}. ${String(month).padStart(2, "0")}. ${new Date(year, month, 0).getDate()}`;
+};
+const periodLabel = (period) => period
+  ? `${formatDateTime(period.startDate)} ~ ${formatDateTime(period.endDate)}`
+  : "제출 기간 미설정";
 function Logo() {
   return (
     <div className="logo">
@@ -53,6 +67,17 @@ function Button({ children, variant = "primary", icon: Icon, ...props }) {
       {Icon && <Icon size={17} />}
       <span>{children}</span>
     </button>
+  );
+}
+function MonthPicker() {
+  const { state, actions } = useApp();
+  return (
+    <div className="month-picker">
+      <button aria-label="이전 달" onClick={() => actions.selectMonth(shiftMonth(state.selectedMonth, -1))}><ArrowLeft /></button>
+      <CalendarDays />
+      <b>{monthLabel(state.selectedMonth)}</b>
+      <button aria-label="다음 달" onClick={() => actions.selectMonth(shiftMonth(state.selectedMonth, 1))}><ArrowRight /></button>
+    </div>
   );
 }
 function Status({ value }) {
@@ -406,7 +431,7 @@ function Login() {
           <h3>이번 달 주요 일정</h3>
           <CalendarDays />
           <b>출근부 제출 마감일</b>
-          <strong>2026. 08. 31</strong>
+          <strong>{monthEndLabel(systemMonth)}</strong>
           <span>23:59까지 제출해주세요.</span>
           <div className="note">
             <CircleAlert />
@@ -499,19 +524,20 @@ function StudentHome() {
   const { state } = useApp();
   const navigate = useNavigate();
   const report = state.reports.find(
-    (r) => r.studentId === state.currentUser.id && r.yearMonth === currentMonth,
+    (r) => r.studentId === state.currentUser.id && r.yearMonth === state.selectedMonth,
   );
   const logs = state.logs.filter(
     (l) =>
-      l.studentId === state.currentUser.id && l.date.startsWith(currentMonth),
+      l.studentId === state.currentUser.id && l.date.startsWith(state.selectedMonth),
   );
-  const period = state.periods.find((p) => p.yearMonth === currentMonth);
+  const period = state.periods.find((p) => p.yearMonth === state.selectedMonth);
   return (
     <Shell role={Role.STUDENT}>
       <div className="student-home">
+        <MonthPicker />
         <section className="hero-dashboard">
           <div>
-            <p className="eyebrow">AUGUST 2026</p>
+            <p className="eyebrow">{monthLabel(state.selectedMonth)}</p>
             <h1>
               이번 달 출근부,
               <br />
@@ -525,7 +551,7 @@ function StudentHome() {
             <div className="card-title">
               <div>
                 <h2>
-                  8월 출근부{" "}
+                  {Number(state.selectedMonth.slice(5))}월 출근부{" "}
                   <Status value={report?.status || ReportStatus.NOT_STARTED} />
                 </h2>
                 <p>
@@ -534,14 +560,14 @@ function StudentHome() {
                     : "마감일 전까지 출근부를 작성하고 제출해주세요."}
                 </p>
               </div>
-              <span className="d-day">D-{getDday(period)}</span>
+              <span className="d-day">D-{getDday(period) ?? "-"}</span>
             </div>
             <div className="metric-row">
               <div>
                 <CalendarDays />
                 <span>
                   <small>마감일</small>
-                  <b>2026. 08. 31</b>
+                  <b>{period ? formatDateTime(period.endDate) : "미설정"}</b>
                 </span>
               </div>
               <div>
@@ -635,12 +661,13 @@ function Attendance() {
   const { state, actions } = useApp();
   const user = state.currentUser;
   const report = state.reports.find(
-    (r) => r.studentId === user.id && r.yearMonth === currentMonth,
+    (r) => r.studentId === user.id && r.yearMonth === state.selectedMonth,
   );
   const source = state.logs.filter(
-    (l) => l.studentId === user.id && l.date.startsWith(currentMonth),
+    (l) => l.studentId === user.id && l.date.startsWith(state.selectedMonth),
   );
   const [logs, setLogs] = useState(source);
+  useEffect(() => setLogs(source), [state.logs, state.selectedMonth, user.id]);
   const input = useRef();
   const readOnly = [ReportStatus.SUBMITTED, ReportStatus.APPROVED].includes(
     report?.status,
@@ -658,6 +685,7 @@ function Attendance() {
     return (
       <Shell role={Role.STUDENT}>
         <div className="workspace">
+          <MonthPicker />
           <Empty title="이번 달 리포트가 없습니다." />
         </div>
       </Shell>
@@ -670,19 +698,16 @@ function Attendance() {
           title="월별 출근부"
           description="근무 기록을 수정하고 PDF 출근부를 제출하세요."
         >
-          <div className="date-box">
-            <CalendarDays />
-            2026. 08
-          </div>
+          <MonthPicker />
         </PageHead>
         <div className="submission-period">
           <CalendarDays />
           <div>
             <b>제출 기간</b>
-            <span>2026.08.01 – 08.31 23:59</span>
+            <span>{periodLabel(state.periods.find((p) => p.yearMonth === state.selectedMonth))}</span>
           </div>
           <strong>
-            D-{getDday(state.periods.find((p) => p.yearMonth === currentMonth))}
+            D-{getDday(state.periods.find((p) => p.yearMonth === state.selectedMonth)) ?? "-"}
           </strong>
         </div>
         <div className="table-wrap attendance-table">
@@ -803,12 +828,15 @@ function Attendance() {
             </div>
             <dl>
               <dt>마감일</dt>
-              <dd>2026.08.31</dd>
+              <dd>{periodLabel(state.periods.find((p) => p.yearMonth === state.selectedMonth))}</dd>
               <dt>제출 일시</dt>
               <dd>{formatDateTime(report.submittedAt)}</dd>
               <dt>편집 상태</dt>
               <dd>{readOnly ? "읽기 전용" : "편집 가능"}</dd>
             </dl>
+            {report.rejectionReason && (
+              <div className="decision rejected"><CircleAlert /><span><b>반려 사유</b><br />{report.rejectionReason}</span></div>
+            )}
             <div className="action-row">
               <Button
                 variant="outline"
@@ -901,10 +929,10 @@ function useAdminRows() {
     .map((user) => ({
       user,
       report: state.reports.find(
-        (r) => r.studentId === user.id && r.yearMonth === currentMonth,
+        (r) => r.studentId === user.id && r.yearMonth === state.selectedMonth,
       ),
       logs: state.logs.filter(
-        (l) => l.studentId === user.id && l.date.startsWith(currentMonth),
+        (l) => l.studentId === user.id && l.date.startsWith(state.selectedMonth),
       ),
     }));
 }
@@ -958,8 +986,9 @@ function StudentTable({ rows, onSelect }) {
 }
 function AdminDashboard() {
   const rows = useAdminRows();
-  const { actions } = useApp();
+  const { state, actions } = useApp();
   const [selected, setSelected] = useState(null);
+  const [periodOpen, setPeriodOpen] = useState(false);
   const completed = rows.filter((r) =>
     submittedStatuses.includes(r.report?.status),
   ).length;
@@ -982,9 +1011,9 @@ function AdminDashboard() {
           title="제출 현황 대시보드"
           description="실제 리포트 데이터로 계산된 제출 현황입니다."
         >
-          <div className="date-box">
-            <CalendarDays />
-            2026.08
+          <div className="page-actions">
+            <MonthPicker />
+            <Button variant="outline" onClick={() => setPeriodOpen(true)}>제출 기간 설정</Button>
           </div>
         </PageHead>
         <div className="metrics">
@@ -1075,17 +1104,86 @@ function AdminDashboard() {
         {selected && (
           <StudentModal data={selected} onClose={() => setSelected(null)} />
         )}
+        {periodOpen && (
+          <PeriodModal
+            period={state.periods.find((p) => p.yearMonth === state.selectedMonth)}
+            onClose={() => setPeriodOpen(false)}
+          />
+        )}
       </div>
     </Shell>
   );
 }
 
+function PeriodModal({ period, onClose }) {
+  const { state, actions } = useApp();
+  const [year, month] = state.selectedMonth.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  const localValue = (value, fallback) => value
+    ? new Date(value).toLocaleString("sv-SE").slice(0, 16).replace(" ", "T")
+    : fallback;
+  const submit = async (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.currentTarget));
+    await actions.savePeriod(new Date(data.startDate).toISOString(), new Date(data.endDate).toISOString());
+    onClose();
+  };
+  return (
+    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <form className="modal compact-modal" onSubmit={submit}>
+        <div className="modal-head">
+          <div><p className="eyebrow">SUBMISSION PERIOD</p><h2>{monthLabel(state.selectedMonth)} 제출 기간</h2></div>
+          <button type="button" aria-label="닫기" onClick={onClose}><X /></button>
+        </div>
+        <label>시작 일시<input name="startDate" type="datetime-local" required defaultValue={localValue(period?.startDate, `${state.selectedMonth}-01T00:00`)} /></label>
+        <label>종료 일시<input name="endDate" type="datetime-local" required defaultValue={localValue(period?.endDate, `${state.selectedMonth}-${String(lastDay).padStart(2, "0")}T23:59`)} /></label>
+        <div className="modal-actions"><Button type="button" variant="outline" onClick={onClose}>취소</Button><Button type="submit" disabled={state.loading}>저장</Button></div>
+      </form>
+    </div>
+  );
+}
+
+function AddStudentModal({ actions, onClose }) {
+  const { state } = useApp();
+  const submit = async (event) => {
+    event.preventDefault();
+    await actions.createStudent(Object.fromEntries(new FormData(event.currentTarget)));
+    onClose();
+  };
+  const fields = [
+    ["username", "아이디", "text"], ["password", "초기 비밀번호", "password"],
+    ["studentNumber", "학번", "text"], ["name", "이름", "text"],
+    ["school", "학교", "text"], ["classNumber", "반", "text"],
+    ["company", "실습 회사", "text"], ["startDate", "실습 시작일", "date"],
+    ["endDate", "실습 종료일", "date"],
+  ];
+  return (
+    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <form className="modal" onSubmit={submit}>
+        <div className="modal-head">
+          <div><p className="eyebrow">CREATE STUDENT</p><h2>학생 계정 추가</h2></div>
+          <button type="button" aria-label="닫기" onClick={onClose}><X /></button>
+        </div>
+        <p className="helper">비밀번호는 Supabase Auth에만 저장되며 프로필에는 저장되지 않습니다.</p>
+        <div className="two-col">
+          {fields.map(([name, label, type]) => (
+            <label key={name}>{label}<input name={name} type={type} minLength={name === "password" ? 8 : undefined} required /></label>
+          ))}
+        </div>
+        <div className="modal-actions"><Button type="button" variant="outline" onClick={onClose}>취소</Button><Button type="submit" disabled={state.loading}>계정 생성</Button></div>
+      </form>
+    </div>
+  );
+}
+
 function AdminStudents() {
   const rows = useAdminRows();
+  const { actions } = useApp();
   const [query, setQuery] = useState(""),
     [status, setStatus] = useState("ALL"),
     [classNo, setClassNo] = useState("ALL"),
-    [selected, setSelected] = useState(null);
+    [selected, setSelected] = useState(null),
+    [adding, setAdding] = useState(false);
   const filtered = rows.filter(
     (r) =>
       (!query || `${r.user.name} ${r.user.studentNumber}`.includes(query)) &&
@@ -1103,7 +1201,10 @@ function AdminStudents() {
           title="학생 관리"
           description="학생 검색과 제출 상태 필터를 이용하세요."
         >
-          <Button icon={UserPlus}>학생 추가</Button>
+          <div className="page-actions">
+            <MonthPicker />
+            <Button icon={UserPlus} onClick={() => setAdding(true)}>학생 추가</Button>
+          </div>
         </PageHead>
         <section className="filter-bar">
           <div className="segmented">
@@ -1155,6 +1256,7 @@ function AdminStudents() {
         {selected && (
           <StudentModal data={selected} onClose={() => setSelected(null)} />
         )}
+        {adding && <AddStudentModal actions={actions} onClose={() => setAdding(false)} />}
       </div>
     </Shell>
   );
@@ -1171,10 +1273,7 @@ function AdminAttendance() {
           description="제출된 출근부를 검토하고 승인 또는 반려합니다."
         />
         <section className="filter-bar">
-          <div className="date-box">
-            <CalendarDays />
-            2026.08
-          </div>
+          <MonthPicker />
           <span className="filter-result">
             총 {rows.length}건 · 검토 대기{" "}
             {
@@ -1196,11 +1295,12 @@ function AdminAttendance() {
 }
 function StudentModal({ data, onClose }) {
   const { state, actions } = useApp();
+  const [rejectionReason, setRejectionReason] = useState("");
   const report = state.reports.find(
-    (r) => r.studentId === data.user.id && r.yearMonth === currentMonth,
+    (r) => r.studentId === data.user.id && r.yearMonth === state.selectedMonth,
   );
   const logs = state.logs.filter(
-    (l) => l.studentId === data.user.id && l.date.startsWith(currentMonth),
+    (l) => l.studentId === data.user.id && l.date.startsWith(state.selectedMonth),
   );
   const canReview = report?.status === ReportStatus.SUBMITTED;
   const download = async () => {
@@ -1289,12 +1389,18 @@ function StudentModal({ data, onClose }) {
         ) : (
           <Empty title="제출된 PDF가 없습니다." />
         )}
+        {report?.rejectionReason && (
+          <div className="decision rejected"><CircleAlert /><span><b>반려 사유</b><br />{report.rejectionReason}</span></div>
+        )}
+        {canReview && (
+          <label className="rejection-input">반려 사유<textarea maxLength={500} value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="반려 시 사유를 필수로 입력하세요." /></label>
+        )}
         <div className="modal-actions">
           <Button
             variant="outline"
-            disabled={!canReview}
+            disabled={!canReview || !rejectionReason.trim()}
             onClick={() =>
-              actions.reviewReport(report, data.user, ReportStatus.REJECTED)
+              actions.reviewReport(report, data.user, ReportStatus.REJECTED, rejectionReason)
             }
           >
             반려
