@@ -34,7 +34,8 @@ export const reportService = {
     const month=Number(report.yearMonth.split('-')[1]);
     const safe=value=>String(value).replace(/[\\/:*?"<>|]/g,'_').trim();
     const fileName=`출근부 ${month}월 ${safe(user.studentNumber)} ${safe(user.name)}.pdf`;
-    const result=await repository.uploadReport(file,`${report.yearMonth}/${user.id}/${fileName}`);
+    const storageKey=`${report.yearMonth}/${user.id}/attendance-report-${report.id}.pdf`;
+    const result=await repository.uploadReport(file,storageKey);
     return repository.updateReport({...report,status:ReportStatus.WRITING,fileName,filePath:result.path});
   },
   downloadUrl:report=>repository.getReportUrl(report.filePath),
