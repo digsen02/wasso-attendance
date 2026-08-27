@@ -18,6 +18,7 @@ export const notificationService = {
 };
 export const reportService = {
   list:()=>repository.getReports(),
+  ensureMonth:yearMonth=>repository.ensureMyMonth(yearMonth),
   history:()=>repository.getReportHistory(),
   dashboard:yearMonth=>repository.getDashboard(yearMonth),
   async saveDraft(report,logs){ await attendanceService.save(logs); return repository.updateReport({...report,status:ReportStatus.WRITING}); },

@@ -79,6 +79,7 @@ export function AppProvider({children}){
       changePassword:password=>run(()=>authService.changePassword(password),'비밀번호를 변경했습니다.'),
       logout:async()=>{await authService.logout();dispatch({type:'READY',payload:{...initial,ready:true}});},
       saveDraft:async(report,logs)=>{await run(()=>reportService.saveDraft(report,logs),'임시 저장했습니다.');await refresh();},
+      ensureMonth:async(yearMonth)=>{await run(()=>reportService.ensureMonth(yearMonth));await refresh();},
       uploadPdf:async(report,file)=>{await run(()=>reportService.upload(report,file,state.currentUser),'PDF 업로드를 완료했습니다.');await refresh();},
       submitReport:async(report,logs)=>{await run(()=>reportService.submit(report,logs),'출근부를 최종 제출했습니다.');await refresh();},
       reviewReport:async(report,student,status,reason)=>{await run(()=>reportService.review(report,student,status,reason),status===ReportStatus.APPROVED?'승인 처리했습니다.':'반려 처리했습니다.');await refresh();},

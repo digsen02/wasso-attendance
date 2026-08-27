@@ -691,6 +691,13 @@ function StudentHome() {
 function Attendance() {
   const { state, actions } = useApp();
   const user = state.currentUser;
+  const internshipStartMonth = user.startDate?.slice(0, 7);
+  const internshipEndMonth = user.endDate?.slice(0, 7);
+  const isInternshipMonth = Boolean(
+    internshipStartMonth && internshipEndMonth
+      && state.selectedMonth >= internshipStartMonth
+      && state.selectedMonth <= internshipEndMonth,
+  );
   const report = state.reports.find(
     (r) => r.studentId === user.id && r.yearMonth === state.selectedMonth,
   );
@@ -698,7 +705,16 @@ function Attendance() {
     (l) => l.studentId === user.id && l.date.startsWith(state.selectedMonth),
   );
   const [logs, setLogs] = useState(source);
+  const [healingMonth, setHealingMonth] = useState(null);
+  const [healingError, setHealingError] = useState(false);
   useEffect(() => setLogs(source), [state.logs, state.selectedMonth, user.id]);
+  useEffect(() => {
+    if (report || !isInternshipMonth || healingMonth === state.selectedMonth) return;
+    const month = state.selectedMonth;
+    setHealingError(false);
+    setHealingMonth(month);
+    actions.ensureMonth(month).catch(() => setHealingError(true));
+  }, [actions, healingMonth, isInternshipMonth, report, state.selectedMonth]);
   const input = useRef();
   const readOnly = [ReportStatus.SUBMITTED, ReportStatus.APPROVED].includes(
     report?.status,
@@ -712,12 +728,24 @@ function Attendance() {
       if (input.current) input.current.value = "";
     }
   };
+  if (!isInternshipMonth)
+    return (
+      <Shell role={Role.STUDENT}>
+        <div className="workspace">
+          <MonthPicker />
+          <Empty title="선택한 월은 실습 기간이 아닙니다." />
+        </div>
+      </Shell>
+    );
   if (!report)
     return (
       <Shell role={Role.STUDENT}>
         <div className="workspace">
           <MonthPicker />
-          <Empty title="이번 달 리포트가 없습니다." />
+          <div className="panel">
+            <p>{healingError ? "월간 출근부 데이터를 준비하지 못했습니다." : "월간 출근부 데이터를 준비하고 있습니다."}</p>
+            {healingError && <Button onClick={() => setHealingMonth(null)}>다시 시도</Button>}
+          </div>
         </div>
       </Shell>
     );

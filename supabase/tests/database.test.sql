@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(34);
+select plan(38);
 select has_table('public','profiles','profiles 테이블');
 select has_table('public','attendance_logs','attendance_logs 테이블');
 select has_table('public','monthly_reports','monthly_reports 테이블');
@@ -17,17 +17,21 @@ select col_not_null('public','attendance_logs','student_id','출근 기록 학�
 select col_not_null('public','monthly_reports','year_month','리포트 월 필수');
 select policies_are('public','notifications',array['notifications_select','notifications_read'],'알림 RLS 정책');
 select has_function('public','ensure_student_month',array['uuid','text'],'월별 레코드 생성 함수');
+select has_function('public','ensure_my_month',array['text'],'학생 본인 월 복구 RPC');
+select ok(has_function_privilege('authenticated','public.ensure_my_month(text)','EXECUTE'),'인증 사용자는 본인 월 복구 RPC를 호출할 수 있다');
 select has_function('public','manage_submission_period',array['text','timestamp with time zone','timestamp with time zone'],'제출 기간 관리 RPC');
 select has_function('public','save_monthly_report_draft',array['uuid','text','text'],'초안 저장 RPC');
 select ok(has_table_privilege('authenticated','public.profiles','SELECT'),'인증 사용자는 profiles 조회 가능');
 select ok(not has_table_privilege('authenticated','public.profiles','UPDATE'),'인증 사용자는 profiles 직접 수정 불가');
 select ok(has_table_privilege('authenticated','public.attendance_logs','UPDATE'),'인증 사용자는 RLS 범위에서 출근 기록 수정 가능');
 select ok(not has_table_privilege('authenticated','public.monthly_reports','UPDATE'),'월 리포트는 RPC로만 수정');
+select ok(not has_table_privilege('authenticated','public.monthly_reports','INSERT'),'월 리포트는 프런트엔드에서 직접 생성할 수 없다');
+select ok(not has_function_privilege('authenticated','public.ensure_student_month(uuid,text)','EXECUTE'),'학생 ID를 받는 내부 프로비저닝 함수는 외부 호출할 수 없다');
 select ok(not has_table_privilege('authenticated','public.submission_periods','INSERT'),'제출 기간은 RPC로만 생성');
 select policies_are('public','profiles',array['profiles_select','profiles_admin_update'],'profiles RLS 정책');
 select policies_are('public','monthly_reports',array['reports_select'],'월 리포트 RLS 정책');
 select has_constraint('public','monthly_reports','rejected_report_requires_reason','반려 사유 필수 제약');
-select has_trigger('public','submission_periods','on_submission_period_saved','월별 레코드 생성 트리거');
+select hasnt_trigger('public','submission_periods','on_submission_period_saved','제출 기간은 월별 데이터를 생성하지 않는다');
 select has_table('public','report_status_history','리포트 상태 이력 테이블');
 select has_column('public','profiles','contact_email','프로필 연락 이메일');
 select has_column('public','profiles','notification_enabled','프로필 알림 설정');

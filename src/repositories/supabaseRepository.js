@@ -16,6 +16,7 @@ export const supabaseRepository = {
   async getUsers(){ return ensure(await supabase.from('profiles').select('*')).map(profileToUser); },
   async getLogs(){ return ensure(await supabase.from('attendance_logs').select('*').order('date')).map(logFromDb); },
   async getReports(){ return ensure(await supabase.from('monthly_reports').select('*')).map(reportFromDb); },
+  async ensureMyMonth(yearMonth){ return reportFromDb(ensure(await supabase.rpc('ensure_my_month',{p_year_month:yearMonth}))); },
   async getPeriods(){ const rows=ensure(await supabase.from('submission_periods').select('*')); return rows.map(r=>({id:r.id,yearMonth:r.year_month,startDate:r.start_date,endDate:r.end_date})); },
   async getNotifications(){ return ensure(await supabase.from('notifications').select('*').order('created_at',{ascending:false})).map(noticeFromDb); },
   async getReportHistory(){ return ensure(await supabase.from('report_status_history').select('*').order('created_at',{ascending:false})).map(historyFromDb); },
