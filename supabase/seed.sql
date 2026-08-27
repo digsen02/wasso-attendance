@@ -1,3 +1,7 @@
 insert into public.submission_periods(year_month,start_date,end_date)
-values('2026-08','2026-08-01 00:00:00+09','2026-08-31 23:59:59+09')
+values(
+  to_char(current_date,'YYYY-MM'),
+  date_trunc('month',current_date)::timestamptz,
+  (date_trunc('month',current_date)+interval '1 month-1 second')::timestamptz
+)
 on conflict(year_month) do update set start_date=excluded.start_date,end_date=excluded.end_date;

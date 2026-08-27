@@ -31,3 +31,6 @@ enable_confirmations = false
 [storage]
 enabled = true
 file_size_limit = "10MiB"
+
+[functions.create-student]
+verify_jwt = true
