@@ -356,7 +356,7 @@ begin
         end
       ))
       from classes c
-    ), '[]'::jsonb)
+    ), '[]'::jsonb))
   into result
   from totals t;
 
