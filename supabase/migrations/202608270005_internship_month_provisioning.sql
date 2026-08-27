@@ -13,6 +13,7 @@ as $$
 declare
   month_start date;
   month_end date;
+  previous_provisioning_setting text;
 begin
   if p_year_month !~ '^\d{4}-(0[1-9]|1[0-2])$' then
     raise exception '올바른 연월(YYYY-MM)을 입력해주세요.' using errcode = '22023';
@@ -30,6 +31,8 @@ begin
     and p.end_date >= month_start
   on conflict (student_id, year_month) do nothing;
 
+  previous_provisioning_setting := current_setting('app.month_provisioning', true);
+  perform set_config('app.month_provisioning', 'true', true);
   insert into public.attendance_logs(student_id, date)
   select p.id, day::date
   from public.profiles p
@@ -44,6 +47,11 @@ begin
     and p.end_date >= month_start
     and extract(isodow from day) between 1 and 5
   on conflict (student_id, date) do nothing;
+  perform set_config(
+    'app.month_provisioning',
+    coalesce(nullif(previous_provisioning_setting, ''), 'false'),
+    true
+  );
 end
 $$;
 
@@ -92,7 +100,8 @@ declare
   target_date date := coalesce(new.date, old.date);
   locked boolean;
 begin
-  if auth.uid() is not null
+  if coalesce(current_setting('app.month_provisioning', true), 'false') <> 'true'
+     and auth.uid() is not null
      and auth.uid() <> target_student
      and not public.is_admin() then
     raise exception '본인의 출근 기록만 변경할 수 있습니다.' using errcode = '42501';
@@ -100,7 +109,8 @@ begin
   select status in ('SUBMITTED', 'APPROVED') into locked
   from public.monthly_reports
   where student_id = target_student and year_month = to_char(target_date, 'YYYY-MM');
-  if coalesce(locked, false) then
+  if coalesce(current_setting('app.month_provisioning', true), 'false') <> 'true'
+     and coalesce(locked, false) then
     raise exception '제출 완료된 출근부는 수정할 수 없습니다.' using errcode = 'P0001';
   end if;
   if tg_op = 'DELETE' then return old; end if;

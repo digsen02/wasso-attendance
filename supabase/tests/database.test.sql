@@ -30,7 +30,18 @@ select ok(not has_function_privilege('authenticated','public.ensure_student_mont
 select ok(not has_table_privilege('authenticated','public.submission_periods','INSERT'),'제출 기간은 RPC로만 생성');
 select policies_are('public','profiles',array['profiles_select','profiles_admin_update'],'profiles RLS 정책');
 select policies_are('public','monthly_reports',array['reports_select'],'월 리포트 RLS 정책');
-select has_constraint('public','monthly_reports','rejected_report_requires_reason','반려 사유 필수 제약');
+select ok(
+  exists(
+    select 1
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'public'
+      and t.relname = 'monthly_reports'
+      and c.conname = 'rejected_report_requires_reason'
+  ),
+  '반려 사유 필수 제약'
+);
 select hasnt_trigger('public','submission_periods','on_submission_period_saved','제출 기간은 월별 데이터를 생성하지 않는다');
 select has_table('public','report_status_history','리포트 상태 이력 테이블');
 select has_column('public','profiles','contact_email','프로필 연락 이메일');

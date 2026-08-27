@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(14);
+select plan(18);
 
 insert into auth.users(id, instance_id, aud, role, email, encrypted_password, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -52,6 +52,42 @@ select is((select count(*)::integer from public.monthly_reports where student_id
 select is((select count(*)::integer from public.attendance_logs where student_id = auth.uid() and date between '2026-08-01' and '2026-08-31'), 21, '반복 호출에도 출근 기록이 중복되지 않는다');
 select throws_ok($$select public.ensure_my_month('2026-10')$$, '22023', '선택한 월은 실습 기간에 포함되지 않습니다.', '실습기간 밖의 월은 거부한다');
 select is((select count(*)::integer from public.monthly_reports where student_id = auth.uid() and year_month = '2026-10'), 0, '실습기간 밖에는 데이터를 만들지 않는다');
+
+insert into storage.objects(bucket_id, name, owner, metadata)
+values (
+  'attendance-reports',
+  '2026-07/20000000-0000-0000-0000-000000000001/attendance.pdf',
+  auth.uid(),
+  '{"mimetype":"application/pdf","size":100}'::jsonb
+);
+select is(
+  (public.save_monthly_report_draft(
+    (select id from public.monthly_reports where student_id = auth.uid() and year_month = '2026-07'),
+    'attendance.pdf',
+    '2026-07/20000000-0000-0000-0000-000000000001/attendance.pdf'
+  )).status::text,
+  'WRITING',
+  '출근부 PDF 경로를 포함한 초안 저장이 동작한다'
+);
+select throws_ok(
+  $$select public.submit_monthly_report((select id from public.monthly_reports where student_id = auth.uid() and year_month = '2026-07'))$$,
+  'P0001', '제출 기간이 아닙니다.', '설정된 제출 기간 밖에서는 최종 제출이 실패한다'
+);
+
+reset role;
+insert into public.submission_periods(year_month, start_date, end_date)
+values ('2026-07', now() - interval '1 day', now() + interval '1 day')
+on conflict (year_month) do update set start_date = excluded.start_date, end_date = excluded.end_date;
+set local role authenticated;
+select is(
+  (public.submit_monthly_report((select id from public.monthly_reports where student_id = auth.uid() and year_month = '2026-07'))).status::text,
+  'SUBMITTED',
+  '제출 기간 안에서는 PDF 출근부를 최종 제출할 수 있다'
+);
+select throws_ok(
+  $$update public.attendance_logs set work_summary = '수정 시도' where student_id = auth.uid() and date = '2026-07-15'$$,
+  'P0001', '제출 완료된 출근부는 수정할 수 없습니다.', '최종 제출 뒤에는 출근 기록이 잠긴다'
+);
 
 select set_config('request.jwt.claims', '{"sub":"20000000-0000-0000-0000-000000000003","role":"authenticated"}', true);
 select throws_ok($$select public.ensure_my_month('2026-08')$$, '42501', '학생 계정만 본인 월 데이터를 생성할 수 있습니다.', '관리자는 학생 self-healing RPC를 호출할 수 없다');
