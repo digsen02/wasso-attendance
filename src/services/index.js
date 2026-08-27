@@ -1,8 +1,9 @@
 import { repository } from '../repositories';
 import { ReportStatus } from '../domain/enums';
+import { validateInternshipDates, validatePassword } from '../utils/validation';
 
-export const authService = { login:(u,p)=>repository.login(u,p), logout:()=>repository.logout(), restore:()=>repository.restoreSession(), signup:input=>repository.signup(input) };
-export const userService = { list:()=>repository.getUsers(), create:input=>repository.createStudent(input) };
+export const authService = { login:(u,p,role)=>repository.login(u,p,role), logout:()=>repository.logout(), restore:()=>repository.restoreSession(), signup:input=>{validatePassword(input.password);validateInternshipDates(input.startDate,input.endDate);return repository.signup(input);}, changePassword:password=>{validatePassword(password);return repository.changePassword(password);} };
+export const userService = { list:()=>repository.getUsers(), create:input=>{validatePassword(input.password);validateInternshipDates(input.startDate,input.endDate);return repository.createStudent(input);}, updateMine:input=>repository.updateMyProfile(input), updateStudent:input=>{validateInternshipDates(input.startDate,input.endDate);return repository.updateStudent(input);} };
 export const attendanceService = { list:()=>repository.getLogs(), save:logs=>repository.upsertLogs(logs) };
 export const submissionPeriodService = {
   list:()=>repository.getPeriods(),
@@ -13,9 +14,12 @@ export const notificationService = {
   list:()=>repository.getNotifications(),
   markRead:id=>repository.markNotificationRead(id),
   reminder:(user,yearMonth)=>repository.sendReminder(user.id,yearMonth),
+  bulkReminder:yearMonth=>repository.sendBulkReminders(yearMonth),
 };
 export const reportService = {
   list:()=>repository.getReports(),
+  history:()=>repository.getReportHistory(),
+  dashboard:yearMonth=>repository.getDashboard(yearMonth),
   async saveDraft(report,logs){ await attendanceService.save(logs); return repository.updateReport({...report,status:ReportStatus.WRITING}); },
   async validatePdf(file){
     if(!file)throw new Error('PDF 파일을 선택해주세요.');

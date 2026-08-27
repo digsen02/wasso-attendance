@@ -36,7 +36,11 @@ Deno.serve(async (request) => {
       throw new Error('학생 계정 정보를 모두 입력해주세요.')
     }
     if (String(input.password).length < 8) throw new Error('비밀번호는 8자 이상이어야 합니다.')
-    if (input.startDate > input.endDate) throw new Error('실습 기간을 확인해주세요.')
+    const startDate = new Date(`${input.startDate}T00:00:00Z`)
+    const endDate = new Date(`${input.endDate}T00:00:00Z`)
+    if (Number.isNaN(startDate.valueOf()) || Number.isNaN(endDate.valueOf()) || startDate > endDate) {
+      throw new Error('실습 시작일은 종료일보다 늦을 수 없습니다.')
+    }
 
     const username = String(input.username).trim()
     const { data, error } = await admin.auth.admin.createUser({
@@ -56,10 +60,20 @@ Deno.serve(async (request) => {
     })
     if (error) throw error
 
+    const optionalProfile = {
+      contact_email: String(input.contactEmail ?? '').trim() || null,
+      phone: String(input.phone ?? '').trim() || null,
+      department: String(input.department ?? '').trim() || null,
+      manager_name: String(input.managerName ?? '').trim() || null,
+      manager_contact: String(input.managerContact ?? '').trim() || null,
+      internship_type: String(input.internshipType ?? '').trim() || '현장실습',
+      work_schedule: String(input.workSchedule ?? '').trim() || '주 5일 · 09:00–18:00',
+    }
     const { data: profile, error: profileError } = await admin
       .from('profiles')
-      .select('*')
+      .update(optionalProfile)
       .eq('id', data.user.id)
+      .select('*')
       .single()
     if (profileError) {
       await admin.auth.admin.deleteUser(data.user.id)

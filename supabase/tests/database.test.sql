@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(26);
+select plan(34);
 select has_table('public','profiles','profiles 테이블');
 select has_table('public','attendance_logs','attendance_logs 테이블');
 select has_table('public','monthly_reports','monthly_reports 테이블');
@@ -28,5 +28,13 @@ select policies_are('public','profiles',array['profiles_select','profiles_admin_
 select policies_are('public','monthly_reports',array['reports_select'],'월 리포트 RLS 정책');
 select has_constraint('public','monthly_reports','rejected_report_requires_reason','반려 사유 필수 제약');
 select has_trigger('public','submission_periods','on_submission_period_saved','월별 레코드 생성 트리거');
+select has_table('public','report_status_history','리포트 상태 이력 테이블');
+select has_column('public','profiles','contact_email','프로필 연락 이메일');
+select has_column('public','profiles','notification_enabled','프로필 알림 설정');
+select has_column('public','monthly_reports','submission_count','월 리포트 제출 횟수');
+select has_function('public','update_my_profile',array['text','text','text','boolean'],'본인 프로필 수정 RPC');
+select has_function('public','update_student_profile',array['uuid','text','text','text','text','text','date','date','text','text','text','text','text','text','text'],'관리자 학생 수정 RPC');
+select has_function('public','send_bulk_submission_reminders',array['text'],'일괄 리마인더 RPC');
+select policies_are('public','report_status_history',array['report_history_select'],'리포트 이력 RLS 정책');
 select * from finish();
 rollback;
