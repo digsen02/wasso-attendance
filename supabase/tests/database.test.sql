@@ -1,5 +1,6 @@
 begin;
 create extension if not exists pgtap;
+
 select plan(26);
 select has_table('public','profiles','profiles 테이블');
 select has_table('public','attendance_logs','attendance_logs 테이블');
