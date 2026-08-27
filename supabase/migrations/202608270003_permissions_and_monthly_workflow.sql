@@ -296,6 +296,74 @@ begin
 end
 $$;
 
+create or replace function public.get_admin_dashboard(
+  p_year_month text
+) returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  result jsonb;
+begin
+  if not public.is_admin() then
+    raise exception '관리자 권한이 필요합니다.' using errcode = '42501';
+  end if;
+  if p_year_month !~ '^\d{4}-(0[1-9]|1[0-2])$' then
+    raise exception '올바른 연월(YYYY-MM)을 입력해주세요.' using errcode = '22023';
+  end if;
+
+  with student_reports as (
+    select
+      p.class_number,
+      coalesce(r.status, 'NOT_STARTED'::public.report_status) as status
+    from public.profiles p
+    left join public.monthly_reports r
+      on r.student_id = p.id
+     and r.year_month = p_year_month
+    where p.role = 'STUDENT'
+  ), totals as (
+    select
+      count(*) as total,
+      count(*) filter (where status in ('SUBMITTED', 'APPROVED')) as submitted
+    from student_reports
+  ), classes as (
+    select
+      class_number,
+      count(*) as total,
+      count(*) filter (where status in ('SUBMITTED', 'APPROVED')) as submitted
+    from student_reports
+    group by class_number
+    order by class_number
+  )
+  select jsonb_build_object(
+    'totalStudents', t.total,
+    'submitted', t.submitted,
+    'missing', t.total - t.submitted,
+    'submissionRate', case
+      when t.total = 0 then 0
+      else round(t.submitted::numeric / t.total * 100, 1)
+    end,
+    'classes', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'classNumber', c.class_number,
+        'total', c.total,
+        'submitted', c.submitted,
+        'rate', case
+          when c.total = 0 then 0
+          else round(c.submitted::numeric / c.total * 100, 1)
+        end
+      ))
+      from classes c
+    ), '[]'::jsonb)
+  into result
+  from totals t;
+
+  return result;
+end
+$$;
+
 create or replace function public.notify_report_status() returns trigger
 language plpgsql
 security definer
@@ -382,6 +450,7 @@ grant execute on function public.get_admin_dashboard(text) to authenticated;
 
 revoke execute on function public.manage_submission_period(text, timestamptz, timestamptz) from public, anon;
 revoke execute on function public.save_monthly_report_draft(uuid, text, text) from public, anon;
+revoke execute on function public.get_admin_dashboard(text) from public, anon;
 
 -- Backfill artifacts for periods and students created before this migration.
 do $$
